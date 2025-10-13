@@ -118,6 +118,21 @@ WORKSPACE_NAME=...
 jupyter notebook 01_basic_agent.ipynb
 ```
 
+### Docker Setup (Alternative)
+
+For a containerized environment with all dependencies pre-installed:
+
+```bash
+# Using docker-compose (recommended)
+docker-compose up
+
+# Or using docker directly
+docker build -t agent-workshop .
+docker run -p 8888:8888 -v $(pwd):/workspace --env-file .env agent-workshop
+```
+
+JupyterLab will be available at `http://localhost:8888`
+
 ## Documentation
 
 - [Official Documentation](https://learn.microsoft.com/en-us/azure/ai-services/agents/)

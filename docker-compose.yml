@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  workshop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agent-framework-workshop
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/workspace
+      - workshop-cache:/root/.cache
+    environment:
+      # Azure OpenAI Configuration (set these in your .env file)
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
+      - AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME=${AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME}
+      - MODEL_DEPLOYMENT_NAME=${MODEL_DEPLOYMENT_NAME}
+      - AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME=${AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME}
+      # Azure AI Foundry Configuration
+      - AZURE_AI_PROJECT_ENDPOINT=${AZURE_AI_PROJECT_ENDPOINT}
+      - AZURE_AI_MODEL_DEPLOYMENT_NAME=${AZURE_AI_MODEL_DEPLOYMENT_NAME}
+      # Azure AI Search Configuration
+      - SEARCH_SERVICE_ENDPOINT=${SEARCH_SERVICE_ENDPOINT}
+      - SEARCH_SERVICE_API_KEY=${SEARCH_SERVICE_API_KEY}
+      - SEARCH_SERVICE_NAME=${SEARCH_SERVICE_NAME}
+      - AZURE_SEARCH_SERVICE_ENDPOINT=${AZURE_SEARCH_SERVICE_ENDPOINT}
+      - AZURE_SEARCH_ADMIN_KEY=${AZURE_SEARCH_ADMIN_KEY}
+      - AZURE_SEARCH_SERVICE_NAME=${AZURE_SEARCH_SERVICE_NAME}
+      # Azure Monitor Configuration
+      - WORKSPACE_ID=${WORKSPACE_ID}
+      - WORKSPACE_NAME=${WORKSPACE_NAME}
+      - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  workshop-cache:
+    driver: local

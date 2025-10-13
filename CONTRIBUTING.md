@@ -62,6 +62,18 @@ We welcome contributions in the following areas:
    git checkout -b feature/your-feature-name
    ```
 
+### Alternative: Docker Development Environment
+
+For a consistent, isolated development environment:
+
+```bash
+# Start the workshop environment
+docker-compose up
+
+# Access JupyterLab at http://localhost:8888
+# Your changes will be reflected immediately due to volume mounting
+```
+
 ## Contribution Guidelines
 
 ### Code Style
