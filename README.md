@@ -87,7 +87,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install azure-ai-projects azure-identity python-dotenv openai mem0ai plotly
+pip install -r requirements.txt
 
 # Copy environment template
 cp .env.example .env  # Edit with your API keys
@@ -159,16 +159,18 @@ The tutorials in this workshop demonstrate patterns used in production systems:
 
 ## Contributing
 
-Contributions welcome! Please:
+Contributions welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on:
 
-1. Fork the repository
-2. Create a feature branch
-3. Add your tutorial or improvements
-4. Submit a pull request
+- Setting up your development environment
+- Code style and best practices
+- Submitting pull requests
+- Reporting issues
+
+We also follow a [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming and inclusive community.
 
 ## License
 
-MIT License - See LICENSE file for details
+GNU General Public License v3.0 - See [LICENSE](LICENSE) file for details
 
 ## Related Projects
 
