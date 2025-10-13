@@ -39,16 +39,25 @@ We welcome contributions in the following areas:
 
 4. **Install dependencies**:
    ```bash
+   # Install production dependencies
    pip install -r requirements.txt
+   
+   # Install development dependencies (recommended for contributors)
+   pip install -r requirements-dev.txt
    ```
 
-5. **Configure environment variables**:
+5. **Set up pre-commit hooks** (optional but recommended):
+   ```bash
+   pre-commit install
+   ```
+
+6. **Configure environment variables**:
    ```bash
    cp .env.example .env
    # Edit .env with your API keys and endpoints
    ```
 
-6. **Create a feature branch**:
+7. **Create a feature branch**:
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -61,6 +70,21 @@ We welcome contributions in the following areas:
 - Use clear, descriptive variable and function names
 - Add comments for complex logic
 - Keep code examples simple and focused on learning
+- Use `black` for code formatting (line length: 100)
+- Use `isort` for import sorting
+- Run `pre-commit run --all-files` before committing (if pre-commit hooks installed)
+
+**Automated Formatting:**
+```bash
+# Format Python code
+black .
+
+# Sort imports
+isort .
+
+# Check with flake8
+flake8 .
+```
 
 ### Jupyter Notebooks
 
