@@ -1,57 +1,111 @@
-# Tutorial 20: Multi-User MCP with Azure API Management OAuth
+# Tutorial 20: Multi-User MCP with Azure API Management AI Gateway
 
 ## Design Document
 
-**Status**: Planning Phase  
-**Date**: October 2025  
-**Estimated Duration**: 75 minutes  
-**Prerequisites**: Tutorial 19 (API Management Integration)
+**Status**: Updated for 2025 Features  
+**Date**: December 2025  
+**Estimated Duration**: 90 minutes  
+**Prerequisites**: Tutorial 19b (Foundry MCP Authentication)
 
 ---
 
 ## 1. Overview
 
-### Building Upon Tutorial 19
+### What's New in 2025
 
-Tutorial 19 introduced Azure API Management (APIM) as an enterprise gateway for MCP servers, covering:
-- Load balancing across MCP server instances
-- Rate limiting and token quotas
-- Circuit breaker patterns
-- Monitoring and observability
+This design document has been updated to incorporate the latest Azure platform capabilities:
 
-**Tutorial 20 extends this foundation** by adding user identity and authorization using APIM's native OAuth capabilities.
+| Feature | Description |
+|---------|-------------|
+| **Microsoft Foundry Responses API** | New GA API replacing Assistants threads pattern |
+| **APIM AI Gateway** | Native GenAI capabilities: semantic caching, token metrics, LLM load balancing |
+| **APIM MCP Server Support** | Expose REST APIs as MCP servers, passthrough to existing MCP servers |
+| **A2A Agent APIs** | Agent-to-Agent protocol support in APIM (preview) |
+| **Azure API Center** | Centralized MCP server registry and discovery portal |
+
+### Building Upon Tutorial 19b
+
+Tutorial 19b introduced Microsoft Foundry's MCP authentication patterns using the Responses API:
+- **Unauthenticated** - Public MCP servers (gitmcp.io, Microsoft Learn)
+- **Key-based** - API keys via Project Connections
+- **Agentic Identity** - Managed Identity for Azure resources
+- **OAuth Passthrough** - User delegation for personalized access
+
+**Tutorial 20 extends this foundation** by integrating APIM's **AI Gateway** as the enterprise control plane for:
+- Multi-user MCP access with identity propagation
+- GenAI-specific policies (token limits, semantic caching)
+- Unified governance across MCP servers and AI APIs
 
 ### Problem Statement
 
-Enterprise AI agents must respect user identity, roles, and permissions when accessing data and systems. Instead of building custom authentication middleware in the MCP server, we leverage APIM's built-in **Credential Manager** to:
+Enterprise AI agents must respect user identity, roles, and permissions when accessing data and systems. Instead of building custom authentication middleware in each MCP server, we leverage:
 
-- Authenticate users via Azure AD/Entra ID
+1. **Microsoft Foundry** - OAuth Identity Passthrough for user delegation
+2. **APIM AI Gateway** - Centralized security, monitoring, and governance
+3. **APIM Credential Manager** - Automated OAuth token lifecycle management
+
+This combination provides:
+- Authenticate users via Microsoft Entra ID
 - Manage OAuth 2.0 connections and token refresh automatically
 - Pass user context to MCP servers through APIM policies
 - Enforce role-based access control (RBAC) on MCP tools
 - Use Row-Level Security (RLS) in Azure SQL Database
+- Track token usage per user for cost allocation
 - Maintain audit trails for compliance
 
-### Architecture Advantage
+### Architecture Advantage: APIM AI Gateway
 
-By using APIM's Credential Manager, we avoid building custom OAuth plumbing:
-- **No custom token validation** - APIM handles JWT validation
-- **No token refresh logic** - APIM automatically refreshes access tokens
-- **No token caching** - APIM caches tokens internally
-- **Centralized policy management** - OAuth policies apply to all APIs/MCP servers
-- **Developer portal integration** - Self-service OAuth consent flow
+Azure API Management now includes dedicated **AI Gateway capabilities**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        APIM AI Gateway Capabilities                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
+│  │  Traffic        │  │  Scalability    │  │  Security       │         │
+│  │  Mediation      │  │  & Performance  │  │  & Safety       │         │
+│  ├─────────────────┤  ├─────────────────┤  ├─────────────────┤         │
+│  │ • REST → MCP    │  │ • Token limits  │  │ • OAuth/JWT     │         │
+│  │ • MCP passthru  │  │ • Semantic cache│  │ • Content safety│         │
+│  │ • A2A agents    │  │ • Load balancer │  │ • IP filtering  │         │
+│  │ • LLM endpoints │  │ • PTU priority  │  │ • Rate limiting │         │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘         │
+│                                                                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
+│  │  Resiliency     │  │  Observability  │  │  Developer      │         │
+│  │                 │  │  & Governance   │  │  Experience     │         │
+│  ├─────────────────┤  ├─────────────────┤  ├─────────────────┤         │
+│  │ • Circuit break │  │ • Token metrics │  │ • API Center    │         │
+│  │ • Retry-After   │  │ • Prompt logging│  │ • MCP registry  │         │
+│  │ • Failover      │  │ • Cost tracking │  │ • Dev portal    │         │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘         │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Benefits Over Custom Middleware
+
+| Aspect | Custom Middleware | APIM AI Gateway |
+|--------|-------------------|-----------------|
+| **OAuth Handling** | Build JWT validation, refresh, caching | Zero-code via Credential Manager |
+| **Token Metrics** | Custom instrumentation | `llm-emit-token-metric` policy |
+| **Semantic Caching** | Build with Redis + embeddings | `llm-semantic-cache-*` policies |
+| **Rate Limiting** | Per-request code | `llm-token-limit` policy (TPM-based) |
+| **MCP Governance** | Build for each server | Centralized policies across all servers |
+| **Monitoring** | Custom logging | Built-in Azure Monitor dashboards |
 
 ### Learning Objectives
 
 By the end of this tutorial, you will:
 
-1. Configure APIM Credential Manager for OAuth 2.0 connections
-2. Set up user-delegated (attended) authentication scenarios
-3. Use `get-authorization-context` policy to attach user tokens
-4. Pass user identity to MCP servers via custom headers
-5. Implement role-based MCP tools in FastMCP
-6. Configure Azure SQL Database with Azure AD and RLS
-7. Implement secure multi-tenant patterns with APIM as the authorization layer
+1. **Expose REST APIs as MCP Servers** - Use APIM to convert existing APIs to MCP protocol
+2. **Configure APIM Credential Manager** - Automate OAuth 2.0 token lifecycle
+3. **Implement AI Gateway Policies** - Token limits, semantic caching, user metrics
+4. **Connect Foundry Agents to APIM MCP** - Use MCPTool with APIM-managed endpoints
+5. **Implement Role-Based MCP Tools** - RBAC using APIM-injected headers
+6. **Configure Database RLS** - Row-Level Security in Azure SQL
+7. **Register MCP Servers in API Center** - Enterprise discovery and governance
 
 ---
 
@@ -101,117 +155,151 @@ A company needs an AI-powered travel assistant where different employees have di
 
 ## 3. Architecture Design
 
-### High-Level Flow with APIM Credential Manager
+### High-Level Flow: Foundry + APIM AI Gateway + MCP
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 1. User authenticates with Azure AD                                  │
-│    - AI agent/app gets user JWT token with claims (oid, email, etc.) │
+│ 1. User authenticates with Microsoft Entra ID                        │
+│    - AI agent/app gets user JWT token with claims (oid, email, roles)│
+│    - Token audience: Microsoft Foundry                                │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
                              ↓
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 2. User interacts with Azure AI Foundry Agent                        │
-│    - Agent configured with user-delegated APIM connection            │
+│ 2. User interacts with Microsoft Foundry Agent (Responses API)        │
+│    - Agent configured with MCPTool pointing to APIM                  │
+│    - Uses OAuth Identity Passthrough authentication                  │
+│    - responses.create() with previous_response_id for conversations  │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
                              ↓
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 3. Agent → APIM Gateway (MCP Server endpoint)                        │
+│ 3. Foundry Agent → APIM AI Gateway (MCP Server endpoint)             │
 │    - Authorization: Bearer <user_jwt_token>                          │
-│    - APIM receives user token from agent                             │
+│    - APIM validates token, extracts user claims                      │
+│    - MCP protocol: Streamable HTTP or SSE transport                  │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
                              ↓
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 4. APIM Credential Manager (Inbound Policy)                          │
+│ 4. APIM AI Gateway Policies (Inbound)                                │
 │    ┌──────────────────────────────────────────────────────────┐     │
-│    │ <get-authorization-context>                               │     │
-│    │   - Validates user JWT token                              │     │
-│    │   - Extracts user identity (oid, email, roles)           │     │
-│    │   - Retrieves/refreshes user's OAuth connection          │     │
-│    │   - Stores access token in context variable              │     │
-│    │ </get-authorization-context>                              │     │
+│    │ <validate-jwt> - Verify Entra ID token                    │     │
+│    │ <get-authorization-context> - Get managed OAuth token     │     │
+│    │ <llm-token-limit> - Enforce TPM limits per user           │     │
+│    │ <llm-semantic-cache-lookup> - Check cached responses      │     │
+│    │ <set-header> - Inject X-User-Id, X-User-Email, X-User-Roles│    │
 │    └──────────────────────────────────────────────────────────┘     │
-│                             │                                         │
+│                                                                       │
+│    MCP Server Options in APIM:                                        │
 │    ┌──────────────────────────────────────────────────────────┐     │
-│    │ <set-header> (Add user context headers)                  │     │
-│    │   - X-User-Id: @(context.Request.Headers.GetValueOrDefault(   │
-│    │                    "oid", "anonymous"))                   │     │
-│    │   - X-User-Email: @(context.Request.Headers.GetValueOrDefault( │
-│    │                       "email", ""))                       │     │
-│    │   - Authorization: Bearer <managed_access_token>         │     │
-│    │ </set-header>                                             │     │
+│    │ Option A: REST API exposed as MCP Server                  │     │
+│    │   - API operations become MCP tools automatically         │     │
+│    │   - No code changes to existing REST APIs                 │     │
+│    │                                                           │     │
+│    │ Option B: Passthrough to existing MCP Server              │     │
+│    │   - FastMCP on ACA, Azure Functions, Logic Apps           │     │
+│    │   - APIM adds governance layer                            │     │
 │    └──────────────────────────────────────────────────────────┘     │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
                              ↓
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 5. FastMCP Server (Azure Container Apps)                             │
+│ 5. MCP Server Backend (FastMCP on Azure Container Apps)              │
 │    ┌──────────────────────────────────────────────────────────┐     │
-│    │ MCP Server receives requests with user context:          │     │
-│    │   - X-User-Id header → identifies user                   │     │
+│    │ MCP Server receives requests with APIM-injected context: │     │
+│    │   - X-User-Id header → user's Entra ID object_id         │     │
 │    │   - X-User-Email header → for display/logging            │     │
-│    │   - Authorization header → APIM-managed token            │     │
+│    │   - X-User-Roles header → comma-separated roles          │     │
+│    │   - Authorization header → APIM-managed OAuth token      │     │
 │    │                                                           │     │
 │    │ MCP Tool Implementation:                                  │     │
-│    │   1. Extract user_id from X-User-Id header               │     │
-│    │   2. Query Users table to get role                       │     │
-│    │   3. Check tool permission matrix                        │     │
-│    │   4. Execute tool with user context                      │     │
-│    │   5. Database queries filtered by RLS                    │     │
+│    │   1. Extract user context from headers (no JWT parsing!) │     │
+│    │   2. Check tool permission matrix (RBAC decorator)       │     │
+│    │   3. Execute tool with user context                      │     │
+│    │   4. Database queries filtered by SESSION_CONTEXT + RLS  │     │
 │    └──────────────────────────────────────────────────────────┘     │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
                              ↓
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 6. Azure SQL Database with Azure AD Authentication                   │
+│ 6. Azure SQL Database with Entra ID Authentication + RLS             │
 │    ┌──────────────────────────────────────────────────────────┐     │
-│    │ Connection:                                               │     │
-│    │   - Managed identity or service principal auth           │     │
-│    │   - MCP server sets SESSION_CONTEXT('user_id', ...)     │     │
+│    │ Connection: Managed Identity or OBO token                 │     │
+│    │ SESSION_CONTEXT: sp_set_session_context 'user_id', ...   │     │
 │    │                                                           │     │
-│    │ Row-Level Security (RLS):                                │     │
-│    │   - Employee: See only own bookings                      │     │
-│    │   - Manager: See team bookings                           │     │
-│    │   - Admin/Finance: See all bookings                      │     │
+│    │ Row-Level Security automatically filters:                 │     │
+│    │   - Employee: See only own bookings                       │     │
+│    │   - Manager: See team bookings                            │     │
+│    │   - Admin/Finance: See all bookings                       │     │
+│    └──────────────────────────────────────────────────────────┘     │
+└──────────────────────────────────────────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────────────┐
+│ 7. Azure API Center - MCP Server Registry                            │
+│    ┌──────────────────────────────────────────────────────────┐     │
+│    │ - Centralized catalog of all MCP servers                  │     │
+│    │ - Discovery portal for developers                         │     │
+│    │ - Sync from APIM automatically                            │     │
+│    │ - Live demo: https://mcp.azure.com                        │     │
 │    └──────────────────────────────────────────────────────────┘     │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Details
 
-#### A. APIM Credential Manager Configuration
+#### A. APIM AI Gateway Policy Configuration
 
-**1. Credential Provider Setup**
-- **Provider Type**: Azure AD (Microsoft Entra ID)
-- **Grant Type**: Authorization Code (user-delegated)
-- **Client ID**: MCP Server App Registration
-- **Scopes**: User.Read, database access scope
-- **Redirect URI**: APIM callback endpoint
-
-**2. APIM Inbound Policy (OAuth + User Context)**
+**1. Inbound Policy: Authentication + AI Gateway Features**
 
 ```xml
 <inbound>
-    <!-- Validate and get user's OAuth connection -->
+    <!-- 1. Validate JWT from Entra ID -->
+    <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
+        <openid-config url="https://login.microsoftonline.com/{tenant}/.well-known/openid-configuration"/>
+        <audiences>
+            <audience>api://travel-mcp-server</audience>
+        </audiences>
+        <issuers>
+            <issuer>https://sts.windows.net/{tenant}/</issuer>
+        </issuers>
+        <required-claims>
+            <claim name="oid" match="any"/>
+        </required-claims>
+    </validate-jwt>
+    
+    <!-- 2. Extract user claims into variables -->
+    <set-variable name="user-id" value="@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Claims["oid"]?.FirstOrDefault() ?? "anonymous")" />
+    <set-variable name="user-email" value="@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Claims["email"]?.FirstOrDefault() ?? "")" />
+    <set-variable name="user-roles" value="@(String.Join(",", context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Claims["roles"] ?? new string[]{}))" />
+    
+    <!-- 3. AI Gateway: Token rate limiting per user (TPM-based) -->
+    <llm-token-limit 
+        counter-key="@((string)context.Variables["user-id"])" 
+        tokens-per-minute="10000" 
+        estimate-prompt-tokens="true"
+        remaining-tokens-variable-name="remainingTokens">
+    </llm-token-limit>
+    
+    <!-- 4. AI Gateway: Semantic cache lookup -->
+    <llm-semantic-cache-lookup 
+        score-threshold="0.9"
+        embeddings-backend-id="embeddings-backend"
+        embeddings-backend-auth="system-assigned">
+        <vary-by>@((string)context.Variables["user-id"])</vary-by>
+    </llm-semantic-cache-lookup>
+    
+    <!-- 5. Get managed OAuth token (for OBO to backend services) -->
     <get-authorization-context 
-        provider-id="azure-ad-provider" 
-        authorization-id="@(context.Request.Headers.GetValueOrDefault("oid", ""))"
+        provider-id="entra-id-provider" 
+        authorization-id="@((string)context.Variables["user-id"])"
         context-variable-name="auth-context" 
-        identity-type="user" 
-        ignore-error="false">
+        identity-type="managed"
+        ignore-error="true">
     </get-authorization-context>
     
-    <!-- Extract user identity from JWT claims -->
-    <set-variable name="user-id" 
-        value="@(context.Request.Headers.GetValueOrDefault("oid", "anonymous"))" />
-    <set-variable name="user-email" 
-        value="@(context.Request.Headers.GetValueOrDefault("email", ""))" />
-    <set-variable name="user-roles" 
-        value="@(context.Request.Headers.GetValueOrDefault("roles", ""))" />
-    
-    <!-- Add user context headers for MCP server -->
+    <!-- 6. Inject user context headers for MCP server -->
     <set-header name="X-User-Id" exists-action="override">
         <value>@((string)context.Variables["user-id"])</value>
     </set-header>
@@ -222,34 +310,85 @@ A company needs an AI-powered travel assistant where different employees have di
         <value>@((string)context.Variables["user-roles"])</value>
     </set-header>
     
-    <!-- Replace Authorization header with managed OAuth token -->
-    <set-header name="Authorization" exists-action="override">
-        <value>@("Bearer " + ((JObject)context.Variables["auth-context"])["AccessToken"])</value>
-    </set-header>
-    
-    <!-- Apply rate limiting per user -->
-    <rate-limit-by-key calls="100" renewal-period="60" 
-        counter-key="@((string)context.Variables["user-id"])" />
-    
-    <!-- Token metrics for monitoring -->
-    <llm-emit-token-metric namespace="mcp-travel">
+    <!-- 7. Emit token metrics for cost tracking -->
+    <llm-emit-token-metric namespace="travel-mcp">
         <dimension name="User" value="@((string)context.Variables["user-email"])" />
         <dimension name="Tool" value="@(context.Request.Url.Path)" />
+        <dimension name="Department" value="@(context.Request.Headers.GetValueOrDefault("X-Department", "unknown"))" />
     </llm-emit-token-metric>
 </inbound>
+
+<outbound>
+    <!-- Store response in semantic cache -->
+    <llm-semantic-cache-store duration="3600" />
+</outbound>
 ```
 
-#### B. Simplified FastMCP Server (No Auth Middleware Needed!)
+**2. MCP Session Rate Limiting (for tool calls)**
+
+```xml
+<!-- Rate limit MCP tool calls by session -->
+<set-variable name="body" value="@(context.Request.Body.As<string>(preserveContent: true))" />
+<choose>
+    <when condition="@(
+        Newtonsoft.Json.Linq.JObject.Parse((string)context.Variables["body"])["method"] != null 
+        && Newtonsoft.Json.Linq.JObject.Parse((string)context.Variables["body"])["method"].ToString() == "tools/call"
+    )">
+        <rate-limit-by-key 
+            calls="100" 
+            renewal-period="60" 
+            counter-key="@(context.Request.Headers.GetValueOrDefault("Mcp-Session-Id", "unknown"))" />
+    </when>
+</choose>
+```
+
+#### B. Exposing REST API as MCP Server in APIM
+
+APIM can now **automatically convert REST APIs to MCP servers**:
+
+1. **In Azure Portal**: APIs → MCP Servers → Create MCP Server
+2. **Select**: "Expose an API as an MCP server"
+3. **Choose API**: Select your REST API (e.g., Travel Booking API)
+4. **Select Operations**: Choose which operations become MCP tools
+
+**Benefits**:
+- No code changes to existing REST APIs
+- API operations automatically become MCP tools
+- OpenAPI descriptions become tool descriptions
+- APIM policies apply to all tool calls
+
+**MCP Server URL**: `https://{apim-name}.azure-api.net/{api-name}-mcp/mcp`
+
+#### C. Passthrough to Existing MCP Server
+
+For custom FastMCP servers:
+
+1. **In Azure Portal**: APIs → MCP Servers → Create MCP Server
+2. **Select**: "Expose an existing MCP server"
+3. **Backend URL**: `https://travel-mcp-server.azurecontainerapps.io/mcp`
+4. **Transport**: Streamable HTTP (recommended) or SSE
+
+**APIM adds**:
+- Authentication at the gateway
+- Rate limiting per user/session
+- Token metrics and logging
+- Semantic caching (where applicable)
+
+#### D. Simplified FastMCP Server (No Auth Middleware Needed!)
 
 The MCP server becomes much simpler since APIM handles all OAuth complexity:
 
-**1. Extract User Context from Headers**
+**1. Extract User Context from APIM-Injected Headers**
 
 ```python
 from fastapi import Request, HTTPException
 
 def get_user_context(request: Request) -> dict:
-    """Extract user context from APIM-injected headers"""
+    """Extract user context from APIM-injected headers.
+    
+    APIM validates JWT and extracts claims, so MCP server 
+    doesn't need any JWT parsing or validation logic!
+    """
     user_id = request.headers.get("X-User-Id")
     user_email = request.headers.get("X-User-Email")
     user_roles = request.headers.get("X-User-Roles", "").split(",")
@@ -260,7 +399,7 @@ def get_user_context(request: Request) -> dict:
     return {
         "user_id": user_id,
         "email": user_email,
-        "roles": user_roles
+        "roles": [r.strip() for r in user_roles if r.strip()]
     }
 ```
 
@@ -463,7 +602,7 @@ WITH (STATE = ON);
 
 **1. AI Agent Application**
 - **App Name**: `travel-assistant-agent`
-- **Redirect URIs**: Azure AI Foundry endpoints
+- **Redirect URIs**: Microsoft Foundry endpoints
 - **API Permissions**: 
   - User.Read (Microsoft Graph)
   - Access to MCP Server API
@@ -487,36 +626,42 @@ WITH (STATE = ON);
 
 ## 5. Implementation Plan
 
-### Part 1: APIM Credential Manager Setup (20 min)
-- Configure OAuth credential provider in APIM
-- Set up user-delegated authorization
-- Create test connection and consent flow
-- Configure access policies for user identities
+### Part 1: APIM AI Gateway Setup (20 min)
+- Create APIM instance with AI Gateway features enabled
+- Configure OAuth credential provider (Entra ID)
+- Set up managed identity for backend services
+- Enable Application Insights for monitoring
 
-### Part 2: APIM Policy Configuration (15 min)
-- Implement inbound policy with `get-authorization-context`
-- Add custom headers for user context propagation
-- Configure rate limiting per user
-- Add token metrics for monitoring
+### Part 2: Expose Travel API as MCP Server (15 min)
+- Import existing Travel REST API to APIM
+- Create MCP Server from REST API
+- Select operations to expose as MCP tools
+- Configure MCP server policies (rate limiting, auth)
 
-### Part 3: Database Setup with RLS (20 min)
-- Create Azure SQL Database with Azure AD auth
+### Part 3: AI Gateway Policy Configuration (20 min)
+- Implement JWT validation policy
+- Configure `llm-token-limit` for TPM-based rate limiting
+- Add `llm-semantic-cache-*` policies for caching
+- Configure `llm-emit-token-metric` for cost tracking
+- Add user context header injection
+
+### Part 4: Database Setup with RLS (15 min)
+- Create Azure SQL Database with Entra ID auth
 - Create database schema (Users, TravelBookings)
 - Implement Row-Level Security policies
 - Seed sample data (users with different roles)
 
-### Part 4: FastMCP Server with RBAC (15 min)
-- Add user context extraction from headers
-- Implement role-based tool decorators
-- Build role-aware MCP tools
-- Connect to database with SESSION_CONTEXT
+### Part 5: Connect Foundry Agent to APIM MCP (15 min)
+- Configure MCPTool with APIM MCP endpoint
+- Set up OAuth Identity Passthrough in Foundry
+- Test tool discovery and invocation
+- Verify user context propagation
 
-### Part 5: Testing Multi-User Scenarios (15 min)
-- Test employee access (view own bookings)
-- Test manager access (approve team requests)
-- Test admin access (system-wide view)
-- Verify RLS enforcement
-- Check audit logs in APIM Analytics
+### Part 6: Register in API Center (10 min)
+- Create Azure API Center instance
+- Sync MCP servers from APIM
+- Configure API Center portal for discovery
+- Test MCP server discovery workflow
 
 ---
 
@@ -590,49 +735,55 @@ Expected: Error message: "Insufficient permissions for tool 'approve_travel_requ
 
 ## 8. Tutorial Structure
 
-### Tutorial 20 Outline (Building on Tutorial 19)
+### Tutorial 20 Outline (Building on Tutorial 19b)
 
-**Part 1: APIM Credential Manager Introduction**
-- Overview of APIM OAuth capabilities
-- User-delegated vs unattended scenarios
-- Credential providers and connections
-- Benefits over custom auth middleware
+**Part 1: Introduction to APIM AI Gateway**
+- What's new in APIM for AI workloads
+- GenAI-specific policies overview
+- MCP server support in APIM
+- Architecture: Foundry + APIM + MCP
 
-**Part 2: Configuring OAuth in APIM**
-- Set up Azure AD credential provider
-- Configure user-delegated access policies
-- Implement consent flow
-- Test OAuth connection
+**Part 2: Exposing REST API as MCP Server**
+- Import REST API to APIM
+- Create MCP Server from API operations
+- Configure tool descriptions from OpenAPI
+- Test with MCP Inspector
 
-**Part 3: APIM Policy for User Context**
-- Write `get-authorization-context` policy
-- Extract user claims and add custom headers
-- Implement per-user rate limiting
-- Add token usage metrics
+**Part 3: AI Gateway Policies**
+- Token rate limiting (`llm-token-limit`)
+- Semantic caching (`llm-semantic-cache-*`)
+- Token metrics (`llm-emit-token-metric`)
+- User context injection (`set-header`)
 
-**Part 4: Database Design with RLS**
+**Part 4: Authentication & Authorization**
+- JWT validation with Entra ID
+- Credential Manager for OAuth tokens
+- User identity propagation to backends
+- Per-user rate limiting
+
+**Part 5: Database Design with RLS**
 - Create Azure SQL schema with user roles
 - Implement Row-Level Security policies
 - Configure SESSION_CONTEXT for filtering
 - Test RLS with different users
 
-**Part 5: FastMCP Server with RBAC**
-- Extract user context from APIM headers
-- Implement role-based decorators
-- Build role-aware MCP tools
-- Connect to database with user context
+**Part 6: Connecting Foundry Agents**
+- Configure MCPTool with APIM endpoint
+- OAuth Identity Passthrough setup
+- Responses API conversation pattern
+- Multi-user session management
 
-**Part 6: End-to-End Testing**
-- Test employee scenario (own bookings only)
-- Test manager scenario (approve team requests)
-- Test admin scenario (system-wide access)
-- Verify audit logs in APIM Analytics
+**Part 7: API Center Integration**
+- Register MCP servers in API Center
+- Configure discovery portal
+- Sync from APIM automatically
+- Developer self-service workflow
 
-**Part 7: Production Best Practices**
-- Token refresh and caching (handled by APIM)
-- Monitoring user access patterns
+**Part 8: Production Best Practices**
+- Monitoring with Azure Monitor dashboards
+- Cost allocation by user/department
 - Compliance and audit requirements
-- Scaling considerations
+- Scaling and performance tuning
 
 ---
 
@@ -640,48 +791,127 @@ Expected: Error message: "Insufficient permissions for tool 'approve_travel_requ
 
 After completing Tutorial 20, learners will understand:
 
-1. **APIM as OAuth Gateway**: Leverage APIM's Credential Manager instead of building custom auth middleware
-2. **User-Delegated Access**: Configure user-specific OAuth connections that maintain individual identity
-3. **Policy-Based Security**: Use APIM policies to inject user context into backend requests
-4. **Database-Level Security**: Implement Row-Level Security (RLS) for defense-in-depth
-5. **Enterprise RBAC**: Build role-based MCP tools without complex authentication code
-6. **Compliance & Audit**: Use APIM Analytics for comprehensive access logging
+1. **APIM AI Gateway**: Leverage purpose-built GenAI capabilities for token limits, semantic caching, and metrics
+2. **REST to MCP Conversion**: Expose existing REST APIs as MCP servers without code changes
+3. **MCP Passthrough**: Govern custom MCP servers (FastMCP, LangChain) through APIM
+4. **User Identity Propagation**: Pass user context from Foundry through APIM to backends
+5. **Responses API Integration**: Use Foundry's new GA API with APIM-managed MCP tools
+6. **Database-Level Security**: Implement Row-Level Security (RLS) for defense-in-depth
+7. **API Center Discovery**: Register and discover MCP servers in enterprise catalog
 
 ### Why This Approach Matters
 
-**Compared to Custom Auth Middleware (Tutorial 20 Alternative)**:
-- ❌ Custom: Build JWT validation, token refresh, caching, error handling
-- ✅ APIM: All OAuth complexity handled by platform
+**Compared to Custom Middleware**:
+
+| Aspect | Custom Build | APIM AI Gateway |
+|--------|--------------|-----------------|
+| Token rate limiting | Custom counters + Redis | `llm-token-limit` policy |
+| Semantic caching | Build embeddings pipeline | `llm-semantic-cache-*` policies |
+| Token metrics | Custom instrumentation | `llm-emit-token-metric` + dashboards |
+| MCP server exposure | Build MCP protocol support | REST API → MCP in portal |
+| OAuth management | JWT validation, refresh, caching | Credential Manager |
+| MCP discovery | Build custom registry | Azure API Center |
 
 **Production Benefits**:
-- Zero-code OAuth flows and token management
-- Centralized policy enforcement across all APIs/MCP servers
-- Built-in monitoring and analytics
-- Developer self-service through APIM portal
+- Zero-code MCP server creation from REST APIs
+- AI-specific policies for token management
+- Built-in monitoring dashboards for GenAI workloads
+- Centralized governance across all MCP servers
+- Developer self-service through API Center portal
 
-This tutorial demonstrates how **Azure API Management** transforms from a simple gateway (Tutorial 19) into a complete **identity-aware API platform** for enterprise AI agents.
+### Integration with Microsoft Foundry
+
+Tutorial 20 demonstrates the complete enterprise pattern:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Enterprise AI Agent Stack                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   │
+│  │ Azure AI      │    │ APIM AI       │    │ MCP Servers   │   │
+│  │ Foundry       │───▶│ Gateway       │───▶│ (ACA/Funcs)   │   │
+│  │               │    │               │    │               │   │
+│  │ • Agents      │    │ • Auth/AuthZ  │    │ • FastMCP     │   │
+│  │ • MCPTool     │    │ • Token mgmt  │    │ • LangChain   │   │
+│  │ • Responses   │    │ • Caching     │    │ • Logic Apps  │   │
+│  │   API         │    │ • Monitoring  │    │               │   │
+│  └───────────────┘    └───────────────┘    └───────────────┘   │
+│                              │                                   │
+│                              ▼                                   │
+│                    ┌───────────────┐                            │
+│                    │ Azure API     │                            │
+│                    │ Center        │                            │
+│                    │               │                            │
+│                    │ • MCP Registry│                            │
+│                    │ • Discovery   │                            │
+│                    │ • Governance  │                            │
+│                    └───────────────┘                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+This architecture demonstrates how **Azure API Management** transforms from a simple gateway into a complete **AI-aware enterprise platform** for managing MCP servers, LLM APIs, and agent-to-agent communication.
 
 ---
 
 ## 10. Next Steps
 
 After Tutorial 20, learners can explore:
-- Tutorial 21: Integrating with Microsoft Graph (access user's calendar, email)
-- Tutorial 22: Multi-tenant SaaS patterns (org-level isolation)
-- Tutorial 23: Advanced compliance (GDPR, data residency)
-- Tutorial 24: Performance at scale (caching, connection pooling)
+- **Tutorial 21**: A2A (Agent-to-Agent) APIs with APIM - multi-agent orchestration
+- **Tutorial 22**: Multi-tenant SaaS patterns with API Center
+- **Tutorial 23**: Advanced compliance (GDPR, data residency, content safety)
+- **Tutorial 24**: Performance at scale (PTU priority, regional load balancing)
+
+---
+
+## 11. Reference Links
+
+### Azure API Management AI Gateway
+- [AI Gateway Capabilities Overview](https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities)
+- [MCP Server Overview](https://learn.microsoft.com/en-us/azure/api-management/mcp-server-overview)
+- [Expose REST API as MCP Server](https://learn.microsoft.com/en-us/azure/api-management/export-rest-mcp-server)
+- [Expose Existing MCP Server](https://learn.microsoft.com/en-us/azure/api-management/expose-existing-mcp-server)
+- [Secure MCP Servers](https://learn.microsoft.com/en-us/azure/api-management/secure-mcp-servers)
+
+### GenAI Policies
+- [llm-token-limit Policy](https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy)
+- [llm-semantic-cache Policies](https://learn.microsoft.com/en-us/azure/api-management/llm-semantic-cache-lookup-policy)
+- [llm-emit-token-metric Policy](https://learn.microsoft.com/en-us/azure/api-management/llm-emit-token-metric-policy)
+- [llm-content-safety Policy](https://learn.microsoft.com/en-us/azure/api-management/llm-content-safety-policy)
+
+### Microsoft Foundry
+- [Responses API](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/responses)
+- [MCP Tools in Foundry](https://learn.microsoft.com/en-us/training/modules/connect-agent-to-mcp-tools/)
+
+### Azure API Center
+- [Register MCP Servers](https://learn.microsoft.com/en-us/azure/api-center/register-discover-mcp-server)
+- [API Center Portal](https://learn.microsoft.com/en-us/azure/api-center/set-up-api-center-portal)
+- [Live MCP Registry Demo](https://mcp.azure.com)
+
+### Labs and Samples
+- [AI Gateway Labs](https://github.com/Azure-Samples/ai-gateway)
+- [AI Gateway Workshop](https://aka.ms/ai-gateway/workshop)
+- [MCP Client Authorization Lab](https://github.com/Azure-Samples/AI-Gateway/tree/main/labs/mcp-client-authorization)
+- [Secure Remote MCP Servers Sample](https://github.com/Azure-Samples/remote-mcp-apim-functions-python)
 
 ---
 
 ## Summary
 
-Tutorial 20 extends Tutorial 19 by adding **user identity and authorization** to MCP servers using **Azure API Management's native OAuth capabilities**. Instead of building custom authentication middleware in the MCP server, we leverage APIM's **Credential Manager** to handle all OAuth complexity (token validation, refresh, caching). 
+Tutorial 20 extends Tutorial 19b by integrating **Azure API Management's AI Gateway** as the enterprise control plane for MCP servers and AI agents. Key updates for 2025:
 
-The MCP server becomes simpler - it just reads user context from APIM-injected headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) and enforces role-based access control. Database security is handled through **Row-Level Security (RLS)** in Azure SQL, providing defense-in-depth.
+1. **APIM AI Gateway Features**: Purpose-built GenAI policies for token limits, semantic caching, and metrics
+2. **Native MCP Support**: Expose REST APIs as MCP servers directly in APIM, or passthrough to existing MCP servers
+3. **Responses API Integration**: Use Foundry's new GA API (`responses.create()`) with APIM-managed MCP tools
+4. **Azure API Center**: Centralized MCP server registry and discovery portal
+5. **A2A Agent APIs**: Support for agent-to-agent communication (preview)
 
-This architecture demonstrates how APIM transforms from a simple gateway into a complete **identity-aware AI agent platform** - perfect for enterprise scenarios requiring multi-user access, role-based permissions, and compliance auditing.
+The MCP server implementation is simplified - APIM handles authentication, rate limiting, and caching, while injecting user context headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`). Database security is enforced through **Row-Level Security (RLS)** in Azure SQL.
+
+This architecture demonstrates the complete **enterprise AI agent stack**: Microsoft Foundry for agent orchestration, APIM AI Gateway for governance, and API Center for discovery.
 
 ---
 
-**Document Status**: Ready for Review  
-**Next Action**: Review design, then proceed with implementation
+**Document Status**: Updated for December 2025 Features  
+**Next Action**: Review design, implement tutorial notebook
