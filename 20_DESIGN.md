@@ -11,7 +11,6 @@
 
 ## 1. Overview
 
-### What's New in 2025
 
 This design document has been updated to incorporate the latest Azure platform capabilities:
 
