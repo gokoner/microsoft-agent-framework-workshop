@@ -231,7 +231,12 @@ def get_server_info() -> dict:
     return _get_server_info()
 
 # ASGI app for uvicorn (used in container deployment - Tutorial 16)
-app = mcp.http_app()
+# Uses simple HTTP transport (NOT streamable-http which requires SSE) with STATELESS mode
+# for Azure Foundry Agent Service compatibility
+# Ref: https://learn.microsoft.com/en-us/azure/ai-foundry/agents/how-to/mcp-authentication
+# "State | Stateless only" - Foundry requires MCP servers to be stateless
+# transport="http" = simple JSON-RPC over HTTP without SSE (streamable-http is default but needs SSE)
+app = mcp.http_app(transport="http", stateless_http=True)
 
 if __name__ == "__main__":
     # Run the server locally via stdio transport
