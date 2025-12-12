@@ -230,13 +230,37 @@ def get_server_info() -> dict:
     """Get information about this MCP server"""
     return _get_server_info()
 
+# Health check endpoint for Azure Container Apps and load balancers
+# Must be defined BEFORE mcp.http_app() is called
+from starlette.responses import JSONResponse
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request):
+    """Health check endpoint for monitoring and load balancers"""
+    return JSONResponse({
+        "status": "healthy", 
+        "service": "travel-mcp-server",
+        "mcp_endpoint": "/mcp"
+    })
+
 # ASGI app for uvicorn (used in container deployment - Tutorial 16)
-# Uses simple HTTP transport (NOT streamable-http which requires SSE) with STATELESS mode
-# for Azure Foundry Agent Service compatibility
+# Uses HTTP transport with STATELESS mode for Azure Foundry Agent Service compatibility
 # Ref: https://learn.microsoft.com/en-us/azure/ai-foundry/agents/how-to/mcp-authentication
 # "State | Stateless only" - Foundry requires MCP servers to be stateless
-# transport="http" = simple JSON-RPC over HTTP without SSE (streamable-http is default but needs SSE)
-app = mcp.http_app(transport="http", stateless_http=True)
+#
+# Path configuration:
+# - path="/mcp" means endpoint is at /mcp (no trailing slash in FastMCP 2.x)
+# - When APIM proxies to https://backend/mcp, it reaches the correct endpoint
+# - Copilot Studio/clients should connect to: APIM_GATEWAY_URL/mcp-travel-api/mcp
+#   which APIM routes to: CONTAINER_APP_URL/mcp
+#
+# Response format:
+# - json_response=True returns plain JSON instead of SSE (text/event-stream)
+# - This is CRITICAL for Copilot Studio compatibility which expects application/json
+# - Without this, clients get "event: message\ndata: {...}" SSE format
+#
+# Note: FastMCP 2.x uses Streamable HTTP by default which is compatible with MCP protocol
+app = mcp.http_app(path="/mcp", stateless_http=True, json_response=True)
 
 if __name__ == "__main__":
     # Run the server locally via stdio transport

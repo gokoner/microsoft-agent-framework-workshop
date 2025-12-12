@@ -244,9 +244,24 @@ def main():
     notebook = load_notebook(str(notebook_path))
     slides = create_slides(notebook)
     
-    # Session state for slide index
+    # Handle empty notebooks
+    if not slides:
+        st.warning("No slides found in this notebook.")
+        return
+    
+    # Session state for slide index - reset if notebook changed or index out of bounds
     if 'slide_idx' not in st.session_state:
         st.session_state.slide_idx = 0
+    if 'current_notebook' not in st.session_state:
+        st.session_state.current_notebook = selected_nb
+    
+    # Reset slide index when switching notebooks or if index exceeds slide count
+    if st.session_state.current_notebook != selected_nb:
+        st.session_state.slide_idx = 0
+        st.session_state.current_notebook = selected_nb
+    
+    # Clamp slide index to valid range
+    st.session_state.slide_idx = max(0, min(st.session_state.slide_idx, len(slides) - 1))
     
     # Sidebar slide list
     with st.sidebar:
